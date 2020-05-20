@@ -21,6 +21,4 @@ object Diff: DiffUtil.ItemCallback<News>() {
         }
         return if (diffBundle.isEmpty) null else diffBundle
     }
-
-
 }
