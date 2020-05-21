@@ -7,73 +7,50 @@ import android.text.Editable
 import android.text.TextUtils
 import android.text.TextWatcher
 import android.widget.Toast
+import com.example.androidmvp.di.App
+import com.example.androidmvp.presenters.AuthPresenter
+import com.example.androidmvp.presenters.SignUpPresenter
+import com.example.androidmvp.views.SignUpView
 import com.google.android.material.snackbar.Snackbar
 import com.google.firebase.auth.FirebaseAuth
 import kotlinx.android.synthetic.main.activity_sign_up.*
+import moxy.MvpAppCompatActivity
+import moxy.ktx.moxyPresenter
+import javax.inject.Inject
+import javax.inject.Provider
 
-class SignUpActivity : AppCompatActivity() {
+class SignUpActivity : MvpAppCompatActivity(), SignUpView {
+    @Inject
+    lateinit var presenterProvider: Provider<SignUpPresenter>
 
-    private var auth: FirebaseAuth? = null
+    private val presenter: SignUpPresenter by moxyPresenter {
+        presenterProvider.get()
+    }
 
     override fun onCreate(savedInstanceState: Bundle?) {
+        App.appComponent.inject(this)
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_sign_up)
-
-        auth = FirebaseAuth.getInstance()
-
-        initClickListeners()
-        initTextListeners()
+        initListeners()
+        presenter.authUser()
     }
 
-    private fun initTextListeners() {
-        email.addTextChangedListener(object : TextWatcher {
-            override fun beforeTextChanged(s: CharSequence, start: Int, count: Int, after: Int) {
-            }
-            override fun onTextChanged(s: CharSequence, start: Int, before: Int, count: Int) {
-            }
-            override fun afterTextChanged(s: Editable) {
-                ti_email.error = null
-            }
-        })
-        password.addTextChangedListener(object : TextWatcher {
-            override fun beforeTextChanged(s: CharSequence, start: Int, count: Int, after: Int) {
-            }
-            override fun onTextChanged(s: CharSequence, start: Int, before: Int, count: Int) {
-            }
-            override fun afterTextChanged(s: Editable) {
-                ti_password.error = null
-            }
-        })
+    private fun initListeners() {
+        val email = email.text.toString()
+        val number = number.text.toString()
+        val password = password.text.toString()
+        btn_signup.setOnClickListener { presenter.signUp(email,password) }
+        btn_register_with_number.setOnClickListener { presenter.signUpWithNumber(number,password) }
+        btn_to_signin.setOnClickListener{ presenter.goToAuth()}
     }
 
-    private fun initClickListeners() {
-        btn_to_signin.setOnClickListener { finish() }
-        btn_signup.setOnClickListener {
-            val email = email.text.toString().trim { it <= ' ' }
-            val password = password.text.toString().trim { it <= ' ' }
-            if (TextUtils.isEmpty(email)) {
-                ti_email.error = "Empty email"
-                return@setOnClickListener
-            }
-            if (TextUtils.isEmpty(password)) {
-                ti_password.error = "Empty password"
-                return@setOnClickListener
-            }
-            if (password.length < 6) {
-                ti_password.error = "Password must contains more than 6 signs"
-                return@setOnClickListener
-            }
-            auth?.createUserWithEmailAndPassword(email, password)
-                ?.addOnCompleteListener(this@SignUpActivity) { task ->
-                    Toast.makeText(this@SignUpActivity,
-                        "createUserWithEmail:onComplete:" + task.isSuccessful, Toast.LENGTH_SHORT).show()
-                    if (!task.isSuccessful) {
-                        Snackbar.make(container, "Authentication failed." + task.exception, Snackbar.LENGTH_SHORT).show()
-                    } else {
-                        startActivity(Intent(this@SignUpActivity, MainActivity::class.java))
-                        finish()
-                    }
-                }
-        }
+    override fun goToAuth() {
+        startActivity(Intent(this, AuthActivity::class.java))
+        finish()
+    }
+
+    override fun goToMain() {
+        startActivity(Intent(this, MainActivity::class.java))
+        finish()
     }
 }

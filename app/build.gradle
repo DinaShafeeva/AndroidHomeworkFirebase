@@ -82,4 +82,9 @@ dependencies {
     implementation "com.google.dagger:dagger:$daggerVersion"
     implementation 'com.google.firebase:firebase-database:19.3.0'
     kapt "com.google.dagger:dagger-compiler:$daggerVersion"
+
+    implementation "com.github.moxy-community:moxy:2.1.1"
+    implementation "com.github.moxy-community:moxy-androidx:2.1.1"
+    implementation "com.github.moxy-community:moxy-ktx:2.1.1"
+    kapt "com.github.moxy-community:moxy-compiler:2.1.1"
 }

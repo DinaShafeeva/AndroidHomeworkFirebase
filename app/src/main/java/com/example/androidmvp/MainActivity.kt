@@ -10,12 +10,14 @@ import android.view.MenuInflater
 import android.view.MenuItem
 import android.widget.EditText
 import androidx.appcompat.app.AlertDialog
-import androidx.appcompat.app.AppCompatActivity
 import androidx.recyclerview.widget.ItemTouchHelper
 import androidx.recyclerview.widget.RecyclerView
 import com.crashlytics.android.Crashlytics
+import com.example.androidmvp.di.App
+import com.example.androidmvp.presenters.MainPresenter
 import com.example.androidmvp.recycler.News
 import com.example.androidmvp.recycler.NewsAdapter
+import com.example.androidmvp.views.MainView
 import com.google.android.gms.ads.AdRequest
 import com.google.android.gms.ads.AdView
 import com.google.android.gms.auth.api.Auth
@@ -28,170 +30,41 @@ import com.google.firebase.remoteconfig.FirebaseRemoteConfigSettings
 import io.fabric.sdk.android.Fabric
 import kotlinx.android.synthetic.main.activity_main.*
 import kotlinx.android.synthetic.main.fragment_dialog.view.*
+import moxy.MvpAppCompatActivity
+import moxy.ktx.moxyPresenter
+import javax.inject.Inject
+import javax.inject.Provider
 
 
-class MainActivity : AppCompatActivity() {
-    private val list: ArrayList<News> = getDataSource()
-    private var adapter: NewsAdapter? = null
-    private var adView: AdView? = null
-    private var username: String? = null
-    private var firebaseAuth: FirebaseAuth? = null
-    private var firebaseUser: FirebaseUser? = null
-    private var googleApiClient: GoogleApiClient? = null
-    private var firebaseAnalytics: FirebaseAnalytics? = null
-    private var firebaseRemoteConfig: FirebaseRemoteConfig? = null
-    private var messageEditText: EditText? = null
+class MainActivity : MvpAppCompatActivity(), MainView {
+    lateinit var dialog: AlertDialog
+
+    @Inject
+    lateinit var presenterProvider: Provider<MainPresenter>
+
+    private val presenter: MainPresenter by moxyPresenter {
+        presenterProvider.get()
+    }
 
     override fun onCreate(savedInstanceState: Bundle?) {
+        App.appComponent.inject(this)
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_main)
-        Fabric.with(this, Crashlytics())
-
-        firebaseAuth = FirebaseAuth.getInstance()
-        firebaseUser = firebaseAuth?.getCurrentUser()
-        username = "ANONYMOUS"
-
-        if (firebaseUser == null) {
-            startActivity( Intent(this, AuthActivity::class.java))
-            finish()
-        } else {
-            username = firebaseUser?.getDisplayName();
-            username = firebaseUser?.getEmail();
-        }
-
-        googleApiClient = GoogleApiClient.Builder(this)
-            .enableAutoManage(this, GoogleApiClient.OnConnectionFailedListener {  })
-            .addApi(Auth.GOOGLE_SIGN_IN_API)
-            .build()
-
-        initAd()
-        firebaseAnalytics = FirebaseAnalytics.getInstance(this)
-
-        adapter = NewsAdapter(getDataSource()) { news ->
-            delete(news)
-        }
-        rv_news.adapter = adapter
-        setRecyclerViewItemTouchListener()
-        btn_show_dialog.setOnClickListener {
-            firebaseAnalytics = FirebaseAnalytics.getInstance(this)
-            initRemoteConfig()
-            showDialog()
-        }
-        btn_signout.setOnClickListener{
-            firebaseAuth?.signOut()
-        }
+        initListeners()
+        initRecycler()
+        initAdd()
+        presenter.authUser()
     }
 
-    private fun initRemoteConfig() {
-        firebaseRemoteConfig = FirebaseRemoteConfig.getInstance()
-        val firebaseRemoteConfigSettings =
-            FirebaseRemoteConfigSettings.Builder()
-                .setMinimumFetchIntervalInSeconds(5)
-                .setDeveloperModeEnabled(true)
-                .build()
-        val defaultConfigMap: MutableMap<String, Any> = HashMap()
-        defaultConfigMap["friendly_msg_length"] = 10L
-        firebaseRemoteConfig?.setConfigSettings(firebaseRemoteConfigSettings)
-        firebaseRemoteConfig?.setDefaults(defaultConfigMap)
-        fetchConfig()
-    }
-
-    private fun fetchConfig() {
-        var cacheExpiration = 3600
-        if (firebaseRemoteConfig != null) {
-            if (firebaseRemoteConfig!!.getInfo().getConfigSettings().isDeveloperModeEnabled()) {
-                cacheExpiration = 0
-            }
-            firebaseRemoteConfig?.fetch(cacheExpiration.toLong())
-                ?.addOnSuccessListener {
-                    firebaseRemoteConfig?.activateFetched();
-                    applyRetrievedLengthLimit();
-                }
-                ?.addOnFailureListener {
-                    Log.w("Log", "Error fetching config");
-                    applyRetrievedLengthLimit();
-                };
+    private fun initListeners() {
+        btn_signout.setOnClickListener { presenter.signOut() }
+        btn_show_dialog.setOnClickListener{
+            presenter.openDialog()
         }
     }
-
-    private fun applyRetrievedLengthLimit(){
-        val friendly_msg_length = firebaseRemoteConfig?.getLong("friendly_msg_length")
-        if (friendly_msg_length != null) {
-            messageEditText?.setFilters(arrayOf<InputFilter>(InputFilter.LengthFilter(friendly_msg_length.toInt())))
-        }
-        Log.d("Log", "FML is:$friendly_msg_length")
-    }
-
-    private fun initAd() {
-        adView = findViewById(R.id.adView)
-        val adRequest =
-            AdRequest.Builder().build()
-        adView?.loadAd(adRequest)
-    }
-
-    private fun setRecyclerViewItemTouchListener() {
-        val itemTouchCallback = object :
-            ItemTouchHelper.SimpleCallback(0, ItemTouchHelper.LEFT or ItemTouchHelper.RIGHT) {
-            override fun onMove(
-                recyclerView: RecyclerView,
-                viewHolder: RecyclerView.ViewHolder,
-                viewHolder1: RecyclerView.ViewHolder
-            ): Boolean {
-                return false
-            }
-            override fun onSwiped(viewHolder: RecyclerView.ViewHolder, swipeDir: Int) {
-                val index = viewHolder.adapterPosition
-                list.removeAt(index)
-                adapter?.updateList(list)
-            }
-        }
-        val itemTouchHelper = ItemTouchHelper(itemTouchCallback)
-        rv_news.addItemDecoration(itemTouchHelper)
-        itemTouchHelper.attachToRecyclerView(rv_news)
-    }
-
-    private fun delete(news: News) {
-        list.remove(news)
-        adapter?.updateList(list)
-    }
-
-    private fun showDialog() {
-        val dialogView = LayoutInflater.from(this).inflate(R.layout.fragment_dialog, null)
-        val builder = this.let {
-            AlertDialog.Builder(it)
-                .setView(dialogView)
-        }
-        val dialog = builder?.show()
-        dialogView.btn_add_dialog.setOnClickListener {
-            dialog?.dismiss()
-            val name = dialogView.et_name_dialog.text.toString()
-            val description = dialogView.et_description.text.toString()
-            var index = dialogView.et_index_dialog.text.toString().toInt() - 1
-            val listSize = list.size
-            if (index > listSize) {
-                index = listSize
-            }
-            list.add(index, News(name, description))
-            adapter?.updateList(list)
-        }
-        dialogView.btn_cancel_dialog.setOnClickListener {
-            dialog?.dismiss()
-        }
-    }
-
-    private fun getDataSource(): ArrayList<News> = arrayListOf(
-        News("Tittle1", "bla-bla"),
-        News("Tittle2", "bla-bla"),
-        News("Tittle3", "bla-bla"),
-        News("Tittle4", "bla-bla"),
-        News("Tittle5", "bla-bla"),
-        News("Tittle6", "bla-bla")
-    )
 
     override fun onDestroy() {
-        if (adView != null) {
-            adView?.destroy()
-        }
+        presenter.destroyAd()
         super.onDestroy()
     }
 
@@ -202,12 +75,44 @@ class MainActivity : AppCompatActivity() {
     }
 
     override fun onOptionsItemSelected(item: MenuItem):Boolean {
-        Log.w("Crashlytics", "Crash button clicked");
-        causeCrash();
+        presenter.causeCrash();
         return true;
     }
 
-    private fun causeCrash() {
-        throw NullPointerException("Fake null pointer exception")
+    override fun openDialog() {
+        val dialogView = LayoutInflater.from(this).inflate(R.layout.fragment_dialog, null)
+        val builder = this.let {
+            AlertDialog.Builder(it)
+                .setView(dialogView)
+        }
+        dialog = builder.show()
+        dialogView.btn_add_dialog.setOnClickListener {
+            presenter.closeDialog()
+            val name = dialogView.et_name_dialog.text.toString()
+            val description = dialogView.et_description.text.toString()
+            val index = dialogView.et_index_dialog.text.toString().toInt() - 1
+
+            presenter.changesFromDialog(name,description,index)
+        }
+        dialogView.btn_cancel_dialog.setOnClickListener {
+           presenter.closeDialog()
+        }
+    }
+
+    override fun closeDialog(){
+        dialog.dismiss()
+    }
+
+    override fun initRecycler() {
+        presenter.initRecycler(rv_news)
+    }
+
+    override fun goToAuth() {
+        startActivity(Intent(this, AuthActivity::class.java))
+        finish()
+    }
+
+    override fun initAdd() {
+        presenter.initAd(findViewById(R.id.adView))
     }
 }
