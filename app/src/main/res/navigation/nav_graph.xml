@@ -1,0 +1,49 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<navigation
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:id="@+id/nav_graph"
+    app:startDestination="@id/fragment_1">
+    <fragment
+        android:id="@+id/fragment_1"
+        android:name="com.example.androidmvp.Fragment1"
+        android:label="fragment_1"
+        tools:layout="@layout/fragment_1" >
+        <action
+            android:id="@+id/action_fragment_1_to_fragment_4"
+            app:destination="@id/fragment_4" />
+    </fragment>
+    <fragment
+        android:id="@+id/fragment_2"
+        android:name="com.example.androidmvp.Fragment2"
+        android:label="fragment_2"
+        tools:layout="@layout/fragment_2" />
+    <fragment
+        android:id="@+id/fragment_3"
+        android:name="com.example.androidmvp.Fragment3"
+        android:label="fragment_3"
+        tools:layout="@layout/fragment_3" >
+        <action
+            android:id="@+id/action_fragment_3_to_fragment_5"
+            app:destination="@id/fragment_5" />
+    </fragment>
+    <fragment
+        android:id="@+id/fragment_4"
+        android:name="com.example.androidmvp.Fragment4"
+        android:label="fragment_4"
+        tools:layout="@layout/fragment_4" />
+    <fragment
+        android:id="@+id/fragment_5"
+        android:name="com.example.androidmvp.Fragment5"
+        android:label="fragment_5"
+        tools:layout="@layout/fragment_5" >
+        <action
+            android:id="@+id/action_fragment5_to_authActivity"
+            app:destination="@id/authActivity" />
+    </fragment>
+    <activity
+        android:id="@+id/authActivity"
+        android:name="com.example.androidmvp.AuthActivity"
+        android:label="AuthActivity" />
+</navigation>

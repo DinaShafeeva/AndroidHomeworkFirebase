@@ -61,6 +61,7 @@ class MainActivity : MvpAppCompatActivity(), MainView {
         btn_show_dialog.setOnClickListener{
             presenter.openDialog()
         }
+        btn_to_graph.setOnClickListener{presenter.goToGraph()        }
     }
 
     override fun onDestroy() {
@@ -109,6 +110,11 @@ class MainActivity : MvpAppCompatActivity(), MainView {
 
     override fun goToAuth() {
         startActivity(Intent(this, AuthActivity::class.java))
+        finish()
+    }
+
+    override fun goToGraph() {
+        startActivity(Intent(this, ContainerActivity::class.java))
         finish()
     }
 

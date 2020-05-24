@@ -3,6 +3,7 @@ package com.example.androidmvp.di
 import android.app.Activity
 import android.content.Context
 import com.example.androidmvp.AuthActivity
+import com.example.androidmvp.ContainerActivity
 import com.example.androidmvp.MainActivity
 import com.example.androidmvp.SignUpActivity
 import com.example.androidmvp.di.modules.AppModule
@@ -19,6 +20,7 @@ interface AppComponent {
     fun inject(activity: AuthActivity)
     fun inject(activity: SignUpActivity)
     fun inject(activity: MainActivity)
+    fun provideContainer(): ContainerActivity
 
     @Component.Builder
     interface Builder {

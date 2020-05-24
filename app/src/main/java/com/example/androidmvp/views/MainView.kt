@@ -10,6 +10,7 @@ interface MainView: MvpView {
     fun openDialog()
     fun initRecycler()
     fun goToAuth()
+    fun goToGraph()
     fun initAdd()
     fun closeDialog()
 }

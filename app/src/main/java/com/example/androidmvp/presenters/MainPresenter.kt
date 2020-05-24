@@ -9,6 +9,7 @@ import com.example.androidmvp.recycler.NewsAdapter
 import com.example.androidmvp.views.MainView
 import com.google.android.gms.ads.AdView
 import moxy.MvpPresenter
+import java.io.IOException
 import javax.inject.Inject
 
 class MainPresenter @Inject constructor(
@@ -31,6 +32,7 @@ class MainPresenter @Inject constructor(
     fun openDialog(){
         viewState.openDialog()
     }
+
     fun changesFromDialog(name:String, desc:String,index: Int){
         val listSize = list?.size
         var newIndex = index
@@ -87,12 +89,16 @@ class MainPresenter @Inject constructor(
         repository.destroyAd()
     }
 
+    fun goToGraph(){
+        viewState.goToGraph()
+    }
+
     fun causeCrash() {
         Log.w("Crashlytics", "Crash button clicked");
         throw NullPointerException("Fake null pointer exception")
     }
 
-    private fun getDataSource(): ArrayList<News> = arrayListOf(
+    fun getDataSource(): ArrayList<News> = arrayListOf(
         News("Tittle1", "bla-bla"),
         News("Tittle2", "bla-bla"),
         News("Tittle3", "bla-bla"),
